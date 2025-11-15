@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>F1 Flight Logs — Qatar Airways Virtual</title>
+  <meta name="description" content="Log your F1 flights with a Qatar Airways-styled Discord embed and export tools." />
+  <style>
+    :root {
+      --qa-burgundy: #5c0a29;
+      --qa-burgundy-600: #4c0822;
+      --qa-burgundy-700: #3e071c;
+      --f1-red: #e10600;
+      --bg: #0c0d10;
+      --panel: #121318;
+      --muted: #9aa3b2;
+      --text: #e7e9ee;
+      --ok: #2ecc71;
+      --warn: #f1c40f;
+      --err: #e74c3c;
+      --card: #161720;
+      --discord-embed: #2b2d31;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+      background: radial-gradient(1200px 600px at 80% -200px, rgba(92,10,41,.25), transparent),
+                  linear-gradient(180deg, #0b0c10, var(--bg));
+      color: var(--text);
+    }
+    header {
+      position: relative;
+      padding: 20px 16px; padding-left: 24px;
+      background: linear-gradient(90deg, var(--qa-burgundy), var(--qa-burgundy-600));
+      color: #fff;
+      border-bottom: 3px solid var(--f1-red);
+      overflow: hidden;
+    }
+    header .brand {
+      display: flex; align-items: center; gap: 12px;
+    }
+    header .flag {
+      width: 44px; height: 28px; border: 2px solid rgba(255,255,255,.3); border-radius: 4px;
+      background: repeating-linear-gradient(
+        45deg,
+        #fff 0 10px,
+        #000 10px 20px
+      );
+      box-shadow: 0 2px 12px rgba(0,0,0,.35);
+    }
+    header h1 { font-size: 20px; margin: 0; letter-spacing: .4px; }
+    header p { margin: 2px 0 0; opacity: .9; }
+
+    .container {
+      max-width: 1200px; margin: 24px auto; padding: 0 16px; display: grid; gap: 24px;
+      grid-template-columns: 1fr 1fr;
+    }
+    @media (max-width: 1024px) { .container { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 14px; padding: 16px 16px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.25);
+    }
+    .card h2 { margin: 0 0 12px; font-size: 18px; font-weight: 700; color: #fff; }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+    form .grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    form .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    form .grid-1 { grid-template-columns: 1fr; }
+    label { display: block; font-size: 12px; color: #cfd6e4; margin-bottom: 6px; letter-spacing: .2px; }
+    input[type="text"], input[type="number"], input[type="datetime-local"], textarea, select {
+      width: 100%; background: var(--panel); color: var(--text); border: 1px solid rgba(255,255,255,.09);
+      padding: 10px 12px; border-radius: 10px; outline: none; transition: border-color .2s ease;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    input:focus, textarea:focus, select:focus { border-color: var(--qa-burgundy); }
+
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    button, .btn {
+      appearance: none; background: linear-gradient(180deg, var(--qa-burgundy), var(--qa-burgundy-700));
+      border: 1px solid rgba(255,255,255,.12); color: #fff; padding: 10px 14px; border-radius: 10px; cursor: pointer;
+      font-weight: 600; letter-spacing: .2px; transition: transform .08s ease, filter .2s ease, background .2s ease;
+    }
+    button:hover { filter: brightness(1.05); }
+    button:active { transform: translateY(1px); }
+    .btn-ghost { background: transparent; border-color: rgba(255,255,255,.18); }
+    .btn-green { background: linear-gradient(180deg, #2ecc71, #2aa95f); border-color: rgba(0,0,0,.2); }
+
+    /* Discord-like embed preview */
+    .embed {
+      background: var(--discord-embed);
+      border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,.06);
+      position: relative; padding: 0; display: grid; grid-template-columns: 6px auto;
+      max-width: 900px; margin: 0 auto; box-shadow: 0 0 0 1px rgba(255,255,255,.04), 0 8px 28px -6px rgba(0,0,0,.5);
+    }
+    .embed .stripe { background: linear-gradient(180deg, var(--f1-red) 0%, var(--qa-burgundy) 100%); }
+    .brand-logo { position:absolute; top:10px; left:14px; width:72px; height:72px; border-radius:14px; background:#121318 center/contain no-repeat; border:1px solid rgba(255,255,255,.15); box-shadow:0 4px 18px -4px rgba(0,0,0,.65); }
+    .team-logo { position:absolute; top:10px; right:14px; width:48px; height:48px; border-radius:10px; background:#121318 center/cover no-repeat; border:1px solid rgba(255,255,255,.12); box-shadow:0 4px 14px -4px rgba(0,0,0,.6); }
+    .embed .content { padding-left:88px; padding-right:88px; }
+    .embed .content { padding: 14px; }
+    .embed .title { font-weight: 700; color: #fff; margin: 2px 0 6px; font-size: 16px; }
+    .embed .desc { color: #dbe0e8; white-space: pre-wrap; line-height:1.35; }
+    .composite-note { font-size:11px; color:#bfc7d6; margin-top:6px; opacity:.8; }
+    .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px,1fr)); gap: 6px; margin-top: 10px; }
+    .field { background: linear-gradient(145deg, rgba(0,0,0,.25), rgba(40,42,48,.35)); border: 1px solid rgba(255,255,255,.09); border-radius: 10px; padding: 8px 10px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.03); }
+    .field .name { font-size: 12px; color: #cdd4e3; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+    .field .value { color: #e7e9ee; }
+    .footer { margin-top: 10px; font-size: 12px; color: #bfc7d6; display: flex; align-items: center; gap: 8px; }
+    .thumb { width: 56px; height: 56px; border-radius: 6px; background-size: cover; background-position: center; border: 1px solid rgba(255,255,255,.08); }
+    .image { margin-top: 10px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,.08); }
+    .image img { width: 100%; height: auto; display: block; }
+
+    .note { border-left: 3px solid var(--f1-red); background: rgba(225,6,0,.1); padding: 8px 10px; border-radius: 6px; color: #ffd4d2; font-size: 12px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="flag" aria-hidden="true"></div>
+      <div>
+        <h1>F1 Flight Logs — Qatar Airways Virtual</h1>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Flight Details</h2>
+      <div class="note" style="margin-bottom:10px;">
+        Enter your Discord Webhook URL (required). The form will send directly to this webhook.
+      </div>
+      <div class="grid-1 grid" style="margin-bottom:8px;">
+        <div>
+          <label>Discord Webhook URL (required)</label>
+          <input type="text" id="webhookUrl" placeholder="https://discord.com/api/webhooks/..." required />
+        </div>
+      </div>
+      <form id="logForm">
+        <div class="grid">
+          <div>
+            <label>Pilot Discord Name (e.g. @Lewis)</label>
+            <input type="text" id="pilot" placeholder="@YourName" />
+            <div class="hint">For an actual ping, enter your Discord user ID below.</div>
+          </div>
+          <div>
+            <label>Pilot Discord User ID (optional, for <@id> mention)</label>
+            <input type="text" id="pilotId" pattern="^\d*$" placeholder="123456789012345678" />
+          </div>
+        </div>
+        <div class="grid">
+          <div>
+            <label>Callsign</label>
+            <input type="text" id="callsign" placeholder="QTR001" />
+          </div>
+          <div>
+            <label>Flight Number</label>
+            <input type="text" id="flightNumber" placeholder="QR123" />
+          </div>
+        </div>
+        <div class="grid">
+          <div>
+            <label>Origin (IATA)</label>
+            <input type="text" id="origin" placeholder="DOH" />
+          </div>
+          <div>
+            <label>Destination (IATA)</label>
+            <input type="text" id="destination" placeholder="LHR" />
+          </div>
+        </div>
+        <div class="grid">
+          <div>
+            <label>Departure (local)</label>
+            <input type="datetime-local" id="departure" />
+          </div>
+          <div class="grid">
+            <div>
+              <label>Duration (hours)</label>
+              <input type="number" id="durH" min="0" step="1" placeholder="2" />
+            </div>
+            <div>
+              <label>Duration (minutes)</label>
+              <input type="number" id="durM" min="0" max="59" step="1" placeholder="15" />
+            </div>
+          </div>
+        </div>
+        <div class="grid">
+          <div>
+            <label>Aircraft Model</label>
+            <select id="aircraft">
+              <option value="">Select model…</option>
+              <option>A350-1000</option>
+              <option>A350-900</option>
+              <option>B777-300ER</option>
+              <option>B787-9</option>
+              <option>A321</option>
+              <option>B777F (Cargo)</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid-1 grid" style="margin-top:6px;">
+          <div>
+            <label>Flight Images (upload, multiple)</label>
+            <input type="file" id="flightFiles" accept="image/*" multiple />
+            <div class="hint">Optional: attach up to 10 flight photos; they will post as a separate follow-up message.</div>
+          </div>
+        </div>
+        <div class="grid-1 grid">
+          <div>
+            <label>Route Map URL (optional)</label>
+            <input type="text" id="mapUrl" placeholder="https://..." />
+          </div>
+        </div>
+        <div class="grid-1 grid">
+          <div>
+            <label>Flight Plan</label>
+            <textarea id="plan" placeholder="Enter your flight plan / route notes..."></textarea>
+          </div>
+        </div>
+        <div class="grid-1 grid">
+          <div>
+            <label>Additional Notes</label>
+            <textarea id="notes" placeholder="Anything else worth mentioning..."></textarea>
+          </div>
+        </div>
+        <div class="grid">
+          <div>
+            <label>F1 Team (required)</label>
+            <select id="f1teamSelect" required></select>
+          </div>
+        </div>
+        <div class="grid">
+          <div>
+            <label>Team Logo URL (optional)</label>
+            <input type="text" id="teamLogoUrl" placeholder="https://..." />
+          </div>
+          <div>
+            <label>Team Drivers (comma-separated)</label>
+            <input type="text" id="teamDrivers" placeholder="Driver A, Driver B" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="sendNow">Send to Webhook</button>
+          <button type="button" class="btn-ghost" id="reset">Reset</button>
+        </div>
+      </form>
+      
+    </section>
+
+    <section class="card">
+      <h2>Discord Embed Preview</h2>
+      <div class="embed" id="embedPreview">
+        <div class="stripe"></div>
+        <div class="content">
+          <div id="pBrandLogo" class="brand-logo" style="display:none"></div>
+          <div id="pTeamLogo" class="team-logo" style="display:none"></div>
+          <div class="title" id="pTitle">QR Flight Log — DOH → LHR</div>
+          <div class="desc" id="pDesc">🏁 F1 Flight Report • Qatar GP 2025</div>
+          <div class="fields" id="pFields"></div>
+          <div class="image" id="pCarImage" style="display:none"><img alt="Team car image" /></div>
+          <div id="pPhotosPreview" style="display:none; margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;
+            background:rgba(255,255,255,.03); padding:8px; border:1px solid rgba(255,255,255,.06); border-radius:8px;
+          "></div>
+          <div class="footer" id="pFooter">
+            <span id="pFooterText">made by @jthweb • preview</span>
+          </div>
+        </div>
+      </div>
+      <div id="flightPicsPreview" style="display:none; margin-top:14px; gap:8px; flex-wrap:wrap;
+        background:rgba(255,255,255,.03); padding:10px; border:1px solid rgba(255,255,255,.06); border-radius:10px;">
+      </div>
+
+      <div id="statusCard" class="card" style="margin-top:12px; background:#121318; display:none;">
+        <div style="font-weight:700; margin-bottom:6px;">Status</div>
+        <div id="statusText" class="mono" style="white-space:pre-wrap; color:#e7e9ee;">—</div>
+      </div>
+    </section>
+  </main>
+
+  <footer style="max-width:1200px; margin:30px auto 50px; padding:0 16px;">
+    <div style="background:#121318; border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:16px; display:flex; flex-wrap:wrap; align-items:center; gap:14px; justify-content:space-between;">
+      <div style="font-size:13px; color:#cdd4e3; letter-spacing:.3px;">Made by <a href="https://jthweb.is-a.dev" target="_blank" style="color:#e0e3ea; text-decoration:none; font-weight:600;">JThweb</a> for Qatar Airways VA (GeoFS)</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:12px; color:#8892a0;">© Qatar Airways Virtual</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const $ = sel => document.querySelector(sel);
+    const form = {
+      webhookUrl: $('#webhookUrl'),
+      pilot: $('#pilot'), pilotId: $('#pilotId'), callsign: $('#callsign'), flightNumber: $('#flightNumber'),
+      origin: $('#origin'), destination: $('#destination'), departure: $('#departure'), durH: $('#durH'), durM: $('#durM'),
+      aircraft: $('#aircraft'), flightFiles: $('#flightFiles'), mapUrl: $('#mapUrl'), plan: $('#plan'), notes: $('#notes'),
+      f1teamSelect: $('#f1teamSelect'), teamLogoUrl: $('#teamLogoUrl'), teamDrivers: $('#teamDrivers')
+    };
+
+    const p = {
+      title: $('#pTitle'), desc: $('#pDesc'), fields: $('#pFields'), carImage: $('#pCarImage'), carImageImg: $('#pCarImage img'),
+      photosPreview: $('#pPhotosPreview'), teamLogo: $('#pTeamLogo'), brandLogo: $('#pBrandLogo'), footerText: $('#pFooterText')
+    };
+
+    // status helpers
+    const statusCard = $('#statusCard');
+    const statusText = $('#statusText');
+    function setStatus(msg, ok=false) {
+      if (!statusCard) return;
+      statusCard.style.display = '';
+      statusText.textContent = msg;
+      statusText.style.color = ok ? '#b9ffcf' : '#e7e9ee';
+    }
+
+    function safe(v) { return (v || '').toString().trim(); }
+
+    function buildMention(name, id) {
+      const n = safe(name);
+      const i = safe(id).match(/^\d{10,}$/) ? id : '';
+      if (i) return `<@${i}>`;
+      return n.startsWith('@') ? n : (n ? '@' + n : '@pilot');
+    }
+
+    function pad2(n){ return String(n).padStart(2,'0'); }
+
+    function fmtDuration(h, m) {
+      const hh = Math.max(0, Number(h||0)|0);
+      const mm = Math.max(0, Math.min(59, Number(m||0)|0));
+      if (hh === 0 && mm === 0) return '—';
+      return `${hh}h ${mm}m`;
+    }
+
+    function nowISO(){ return new Date().toISOString(); }
+
+    const TEAMS = [
+      { key: 'mclaren', name: 'McLaren', color: '#ff8000', drivers: ['Oscar Piastri','Lando Norris'], logo: '' , car: 'https://media.formula1.com/image/upload/c_lfill,h_224/q_auto/d_common:f1:2025:fallback:car:2025fallbackcarright.webp/v1740000000/common/f1/2025/mclaren/2025mclarencarright.webp' },
+      { key: 'mercedes', name: 'Mercedes', color: '#00a19b', drivers: ['George Russell','Kimi Antonelli'], logo: '' , car: 'https://media.formula1.com/image/upload/c_lfill,h_224/q_auto/d_common:f1:2025:fallback:car:2025fallbackcarright.webp/v1740000000/common/f1/2025/mercedes/2025mercedescarright.webp' },
+      { key: 'redbull', name: 'Red Bull', color: '#1e2a5a', drivers: ['Max Verstappen','Yuki Tsunoda'], logo: '' , car: 'https://media.formula1.com/image/upload/c_lfill,h_224/q_auto/d_common:f1:2025:fallback:car:2025fallbackcarright.webp/v1740000000/common/f1/2025/redbullracing/2025redbullracingcarright.webp' },
+      { key: 'ferrari', name: 'Ferrari', color: '#e10600', drivers: ['Charles Leclerc','Lewis Hamilton'], logo: '' , car: 'https://media.formula1.com/image/upload/c_lfill,h_224/q_auto/d_common:f1:2025:fallback:car:2025fallbackcarright.webp/v1740000000/common/f1/2025/ferrari/2025ferraricarright.webp' },
+      { key: 'williams', name: 'Williams', color: '#00a3e0', drivers: ['Alexander Albon','Carlos Sainz'], logo: '' , car: 'https://media.formula1.com/image/upload/c_lfill,h_224/q_auto/d_common:f1:2025:fallback:car:2025fallbackcarright.webp/v1740000000/common/f1/2025/williams/2025williamscarright.webp' },
+      { key: 'racingbulls', name: 'Racing Bulls', color: '#162550', drivers: ['Liam Lawson','Isack Hadjar'], logo: '' , car: 'https://media.formula1.com/image/upload/c_lfill,h_224/q_auto/d_common:f1:2025:fallback:car:2025fallbackcarright.webp/v1740000000/common/f1/2025/racingbulls/2025racingbullscarright.webp' },
+      { key: 'aston', name: 'Aston Martin', color: '#00665e', drivers: ['Lance Stroll','Fernando Alonso'], logo: '' , car: 'https://media.formula1.com/image/upload/c_lfill,h_224/q_auto/d_common:f1:2025:fallback:car:2025fallbackcarright.webp/v1740000000/common/f1/2025/astonmartin/2025astonmartincarright.webp' },
+      { key: 'haas', name: 'Haas', color: '#b1b1b1', drivers: ['Esteban Ocon','Oliver Bearman'], logo: '' , car: 'https://media.formula1.com/image/upload/c_lfill,h_224/q_auto/d_common:f1:2025:fallback:car:2025fallbackcarright.webp/v1740000000/common/f1/2025/haasf1team/2025haasf1teamcarright.webp' },
+      { key: 'sauber', name: 'Sauber', color: '#3acc70', drivers: ['Nico Hülkenberg','Gabriel Bortoleto'], logo: '' , car: 'https://media.formula1.com/image/upload/c_lfill,h_224/q_auto/d_common:f1:2025:fallback:car:2025fallbackcarright.webp/v1740000000/common/f1/2025/kicksauber/2025kicksaubercarright.webp' },
+      { key: 'alpine', name: 'Alpine', color: '#0090ff', drivers: ['Pierre Gasly','Franco Colapinto'], logo: '' , car: 'https://media.formula1.com/image/upload/c_lfill,h_224/q_auto/d_common:f1:2025:fallback:car:2025fallbackcarright.webp/v1740000000/common/f1/2025/alpine/2025alpinecarright.webp' },
+      { key: 'apxgp', name: 'APX GP', color: '#e10600', drivers: ['Sonny Hayes','Joshua Pierce'], logo: '' , car: 'https://creations.mattel.com/cdn/shop/files/wxyajdaa4vohvzs4yi7k_a0a8ed7f-6733-4e2d-ae5d-8989cc397311_1600x1600.jpg' }
+    ];
+
+    function initTeams() {
+      const sel = form.f1teamSelect;
+      sel.innerHTML = '';
+      TEAMS.forEach(t => { const o = document.createElement('option'); o.value = t.key; o.textContent = t.name; sel.appendChild(o); });
+      sel.addEventListener('change', () => {
+        const t = TEAMS.find(x => x.key === sel.value) || TEAMS[0];
+        form.teamLogoUrl.value = t.logo || '';
+        form.teamDrivers.value = (t.drivers || []).join(', ');
+        if (t.car) { p.carImage.style.display = ''; p.carImageImg.src = t.car; p.carImageImg.alt = `${t.name} car`; } else { p.carImage.style.display = 'none'; }
+        generate();
+      });
+    }
+
+    function generate() {
+      const pilot = safe(form.pilot.value);
+      const pilotId = safe(form.pilotId.value);
+      const callsign = safe(form.callsign.value);
+      const flightNumber = safe(form.flightNumber.value);
+      const origin = safe(form.origin.value).toUpperCase();
+      const destination = safe(form.destination.value).toUpperCase();
+      const departure = safe(form.departure.value);
+      const durH = safe(form.durH.value);
+      const durM = safe(form.durM.value);
+      const aircraft = safe(form.aircraft.value);
+      const files = (form.flightFiles.files && form.flightFiles.files.length) ? Array.from(form.flightFiles.files).slice(0,10) : [];
+      const mapUrl = safe(form.mapUrl.value);
+      const plan = safe(form.plan.value);
+      const notes = safe(form.notes.value);
+      const teamKey = form.f1teamSelect.value;
+      const teamMeta = TEAMS.find(t => t.key === teamKey);
+      const f1team = teamMeta ? teamMeta.name : '';
+      let teamLogo = safe(form.teamLogoUrl.value) || (teamMeta ? (teamMeta.logo || '') : '');
+      if (!teamLogo && teamMeta && teamMeta.car) teamLogo = teamMeta.car; // fallback to car image for visibility
+      const teamDrivers = safe(form.teamDrivers.value);
+
+      const route = origin && destination ? `${origin} → ${destination}` : '—';
+      // Pilot display: raw ID preferred (no ping); fallback to name
+      const pilotDisplay = pilotId ? pilotId : (pilot.replace(/^@/, '') || '—');
+
+      // Update preview title/description
+      p.title.textContent = `QR Flight Log — ${route}`;
+      const F1_EVENT = 'Qatar GP 2025';
+      const f1tag = ` • ${F1_EVENT}`;
+      p.desc.textContent = `🏁 Qatar GP 2025 • ${f1team || 'F1 Flight'} • ${fmtDuration(durH, durM)}`;
+      const stripe = document.querySelector('#embedPreview .stripe');
+      if (stripe && teamMeta && teamMeta.color) stripe.style.background = `linear-gradient(180deg, ${teamMeta.color}, var(--qa-burgundy))`;
+
+      // Build fields
+      p.fields.innerHTML = '';
+      const field = (name, value) => {
+        const d = document.createElement('div'); d.className = 'field';
+        const n = document.createElement('div'); n.className = 'name'; n.textContent = name;
+        const v = document.createElement('div'); v.className = 'value'; v.textContent = value || '—';
+        d.appendChild(n); d.appendChild(v); p.fields.appendChild(d);
+      };
+      field('Pilot', pilotDisplay);
+      field('Callsign', callsign);
+      field('Flight', flightNumber);
+      field('Route', route);
+      // Discord timestamp formatting for departure
+      if (departure) {
+        const epoch = Math.floor(new Date(departure).getTime()/1000);
+        field('Departure', `<t:${epoch}:f> • <t:${epoch}:R>`);
+      } else {
+        field('Departure', '—');
+      }
+      field('Duration', fmtDuration(durH, durM));
+      field('Aircraft', aircraft);
+      if (f1team) field('Team', f1team);
+      if (teamDrivers) field('Drivers', teamDrivers);
+      if (plan) field('Flight Plan', plan);
+      if (notes) field('Notes', notes);
+
+      // Car image preview
+      if (teamMeta && teamMeta.car) {
+        p.carImage.style.display = '';
+        p.carImageImg.src = teamMeta.car;
+        p.carImageImg.alt = `${f1team} car`;
+      } else { p.carImage.style.display='none'; }
+
+      // Flight photos thumb preview
+      if (files.length) {
+        p.photosPreview.style.display = 'flex';
+        p.photosPreview.innerHTML = '';
+        files.forEach(f => {
+          const url = URL.createObjectURL(f);
+          const box = document.createElement('div');
+          box.style.cssText='width:80px;height:50px;border:1px solid rgba(255,255,255,.15);border-radius:6px;overflow:hidden;background:#000';
+          const img = document.createElement('img'); img.src = url; img.alt = f.name; img.style.cssText='width:100%;height:100%;object-fit:cover;display:block';
+          box.appendChild(img); p.photosPreview.appendChild(box);
+        });
+      } else { p.photosPreview.style.display='none'; p.photosPreview.innerHTML=''; }
+
+      // Footer and thumbnail
+      const ts = new Date();
+      p.footerText.textContent = `made by @jthweb • ${ts.toLocaleDateString()} ${ts.toLocaleTimeString()}`;
+      const BRAND_LOGO_URL = 'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Flogos-world.net%2Fwp-content%2Fuploads%2F2020%2F03%2FQatar-Airways-Symbol.png&f=1&nofb=1&ipt=d7f8771db192c1f5a280f2db0156a9a5cfd428aced1b9f7e2992b62bab2b32ef';
+      p.brandLogo.style.display = ''; p.brandLogo.style.backgroundImage = `url('${BRAND_LOGO_URL}')`;
+      if (teamLogo) { p.teamLogo.style.display = ''; p.teamLogo.style.backgroundImage = `url('${teamLogo}')`; } else { p.teamLogo.style.display = 'none'; }
+
+      // Build message content and embed JSON (content now pilot mention)
+      const planBlock = plan ? `\n\nFlight Plan:\n\n\u0060\u0060\u0060\n${plan}\n\u0060\u0060\u0060` : '';
+      const notesLine = notes ? `\nNotes: ${notes}` : '';
+      const mapLine = mapUrl ? `\nRoute Map: ${mapUrl}` : '';
+      // No message content (embed only)
+      const content = ''; // no ping in message content
+
+      // Discord embed JSON payload
+      const colorHex = (teamMeta && teamMeta.color ? teamMeta.color.replace('#','') : '5c0a29');
+      const color = parseInt(colorHex, 16);
+      const fields = [
+        { name: 'Pilot', value: pilotDisplay, inline: true },
+        { name: 'Callsign', value: callsign || '—', inline: true },
+        { name: 'Flight', value: flightNumber || '—', inline: true },
+        { name: 'Route', value: route, inline: true },
+        { name: 'Departure', value: departure ? (() => { const e = Math.floor(new Date(departure).getTime()/1000); return `<t:${e}:f> • <t:${e}:R>`; })() : '—', inline: true },
+        { name: 'Duration', value: fmtDuration(durH, durM), inline: true },
+        { name: 'Aircraft', value: aircraft || '—', inline: true },
+      ];
+      if (f1team) fields.push({ name: 'Team', value: f1team, inline: true });
+      if (teamDrivers) fields.push({ name: 'Drivers', value: teamDrivers, inline: true });
+      if (plan) fields.push({ name: 'Flight Plan', value: plan, inline: false });
+      if (notes) fields.push({ name: 'Notes', value: notes, inline: false });
+
+      const embed = {
+        title: `QR Flight Log — ${route}`,
+        description: `🏁 Qatar GP 2025 • Pilot Performance • ${fmtDuration(durH, durM)}`,
+        color,
+        timestamp: nowISO(),
+        fields,
+        image: (teamMeta && teamMeta.car) ? { url: teamMeta.car } : undefined,
+        footer: { text: `made by @jthweb` },
+        author: { name: 'Qatar Airways Virtual', icon_url: BRAND_LOGO_URL },
+        thumbnail: teamLogo ? { url: teamLogo } : undefined
+      };
+      // Add gallery embeds for flight photos (tile effect) referencing attachments
+      // Embed list only main embed (car image handled in embed.image)
+      const embeds = [embed];
+      const payload = { content, embeds };
+
+      // Persist basic info
+      try { localStorage.setItem('f1log:last', JSON.stringify({ pilot, pilotId, callsign, flightNumber, origin, destination, departure, durH, durM, aircraft, mapUrl, plan, notes, f1teamSelect: teamKey, teamLogoUrl: teamLogo, teamDrivers })); } catch {}
+
+      return payload;
+    }
+
+    function restore() {
+      try {
+        const raw = localStorage.getItem('f1log:last');
+        if (!raw) return;
+        const d = JSON.parse(raw);
+        Object.keys(d).forEach(k => { if (form[k]) form[k].value = d[k]; });
+        if (d.f1teamSelect) form.f1teamSelect.value = d.f1teamSelect;
+      } catch {}
+    }
+
+    function resetForm() {
+      Object.values(form).forEach(el => { if ('value' in el) el.value = ''; });
+      if (form.flightFiles) form.flightFiles.value = '';
+      if (statusCard) { statusCard.style.display = 'none'; statusText.textContent = '—'; }
+      p.fields.innerHTML = ''; p.title.textContent = 'QR Flight Log — DOH → LHR'; p.desc.textContent = 'F1 Flight Report for Qatar Airways Virtual';
+      p.carImage.style.display = 'none'; p.flightPicsPreview.style.display='none'; p.flightPicsPreview.innerHTML='';
+      try { localStorage.removeItem('f1log:last'); } catch {}
+    }
+
+    // Send button: validate + generate + post
+    async function sendNow() {
+      // basic validation
+      const url = safe(form.webhookUrl.value);
+      if (!url || !/^https:\/\/discord\.com\/api\/webhooks\//.test(url)) { setStatus('Please enter a valid Discord webhook URL.'); return; }
+      if (!form.f1teamSelect.value) { setStatus('Please select an F1 team.'); return; }
+      const payload = generate();
+      const files = (form.flightFiles.files && form.flightFiles.files.length) ? Array.from(form.flightFiles.files).slice(0,10) : [];
+      try {
+        setStatus('Sending to webhook...');
+        // First message: embed only
+        let res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        if (!res.ok) throw new Error('HTTP '+res.status);
+        // Second message: attachments (flight photos)
+        if (files.length) {
+          const fd = new FormData();
+          fd.append('payload_json', JSON.stringify({ content: '', embeds: [] }));
+          files.forEach((f,i)=> fd.append(`files[${i}]`, f, f.name));
+          const res2 = await fetch(url, { method:'POST', body: fd });
+          if (!res2.ok) throw new Error('HTTP '+res2.status+' (photos)');
+        }
+        setStatus('Posted embed'+(files.length?' + photos':'')+' successfully.', true);
+      } catch (e) {
+        setStatus('Posting failed (likely CORS). Try from a trusted environment or use your bot to relay.');
+      }
+    }
+    $('#sendNow').addEventListener('click', sendNow);
+    $('#reset').addEventListener('click', resetForm);
+
+    // Init
+    initTeams();
+    restore();
+    // live auto-update preview
+    document.addEventListener('input', generate);
+    document.addEventListener('change', generate);
+    generate();
+  </script>
+</body>
+</html>
